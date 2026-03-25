@@ -2,7 +2,7 @@ streamlit
 torch
 torchvision
 pillow
-opencv-python
 numpy
 matplotlib
 grad-cam
+opencv-python-headless
