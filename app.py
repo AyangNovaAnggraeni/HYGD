@@ -35,7 +35,7 @@ transform = transforms.Compose([
 # =========================
 # UI
 # =========================
-st.title("🧠 Glaucoma Detection App")
+st.title(" Glaucoma Detection App")
 st.write("Upload a fundus image to predict glaucoma.")
 
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg","png"])
@@ -54,7 +54,7 @@ if uploaded_file is not None:
 
     prob_glaucoma = probs[1].item()
 
-    # Threshold (your best one 🔥)
+    # Threshold (your best one)
     threshold = 0.26
 
     if prob_glaucoma > threshold:
