@@ -5,7 +5,7 @@ pillow
 numpy
 matplotlib
 opencv-python-headless==4.9.0.80
-grad-cam
+# grad-cam
 
 #  BLOCK THIS
 opencv-python==0
