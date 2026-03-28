@@ -6,7 +6,7 @@ from PIL import Image
 from torchvision import models
 import sys
 
-st.write(sys.version)
+# st.write(sys.version)
 
 # =========================
 # Grad-CAM (Manual)
@@ -44,21 +44,33 @@ class GradCAM:
             cam += w * activations[i]
 
         cam = np.maximum(cam, 0)
+
+        # sharpen contrast
+        cam = cam - cam.min()
         cam = cam / (cam.max() + 1e-8)
+
+        # optional: make peaks stronger
+        cam = cam ** 1.5
 
         return cam
 
 
+import matplotlib.cm as cm
+
 def overlay_cam(image, cam):
     cam = np.uint8(255 * cam)
-    cam = Image.fromarray(cam).resize(image.size)
 
-    heatmap = np.array(cam) / 255.0
+    # Resize CAM to image size
+    cam = Image.fromarray(cam).resize(image.size)
+    cam = np.array(cam)
+
+    # Apply colormap (JET)
+    heatmap = cm.jet(cam / 255.0)[:, :, :3]  # RGB only
+
     image_np = np.array(image) / 255.0
 
-    overlay = image_np.copy()
-    overlay[:, :, 0] += heatmap * 0.4  # red highlight
-
+    # Blend
+    overlay = heatmap * 0.5 + image_np * 0.5
     overlay = np.clip(overlay, 0, 1)
 
     return overlay
