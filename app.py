@@ -3,15 +3,66 @@ import torch
 import torchvision.transforms as transforms
 import numpy as np
 from PIL import Image
-import cv2
 from torchvision import models
-# from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-
 import sys
-import streamlit as st
 
 st.write(sys.version)
+
+# =========================
+# Grad-CAM (Manual)
+# =========================
+class GradCAM:
+    def __init__(self, model, target_layer):
+        self.model = model
+        self.target_layer = target_layer
+        self.gradients = None
+        self.activations = None
+
+        self.target_layer.register_forward_hook(self.forward_hook)
+        self.target_layer.register_backward_hook(self.backward_hook)
+
+    def forward_hook(self, module, input, output):
+        self.activations = output
+
+    def backward_hook(self, module, grad_input, grad_output):
+        self.gradients = grad_output[0]
+
+    def generate(self, input_tensor, class_idx):
+        self.model.zero_grad()
+        output = self.model(input_tensor)
+
+        loss = output[:, class_idx]
+        loss.backward()
+
+        gradients = self.gradients[0].detach().numpy()
+        activations = self.activations[0].detach().numpy()
+
+        weights = np.mean(gradients, axis=(1, 2))
+        cam = np.zeros(activations.shape[1:], dtype=np.float32)
+
+        for i, w in enumerate(weights):
+            cam += w * activations[i]
+
+        cam = np.maximum(cam, 0)
+        cam = cam / (cam.max() + 1e-8)
+
+        return cam
+
+
+def overlay_cam(image, cam):
+    cam = np.uint8(255 * cam)
+    cam = Image.fromarray(cam).resize(image.size)
+
+    heatmap = np.array(cam) / 255.0
+    image_np = np.array(image) / 255.0
+
+    overlay = image_np.copy()
+    overlay[:, :, 0] += heatmap * 0.4  # red highlight
+
+    overlay = np.clip(overlay, 0, 1)
+
+    return overlay
+
 
 # =========================
 # Load Model
@@ -24,25 +75,29 @@ def load_model():
     model.eval()
     return model
 
+
 model = load_model()
+
 
 # =========================
 # Transform
 # =========================
 transform = transforms.Compose([
-    transforms.Resize((224,224)),
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    transforms.Normalize([0.485,0.456,0.406],
-                         [0.229,0.224,0.225])
+    transforms.Normalize([0.485, 0.456, 0.406],
+                         [0.229, 0.224, 0.225])
 ])
+
 
 # =========================
 # UI
 # =========================
-st.title(" Glaucoma Detection App")
+st.title("👁️ Glaucoma Detection App")
 st.write("Upload a fundus image to predict glaucoma.")
 
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg","png"])
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png"])
+
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
@@ -50,15 +105,15 @@ if uploaded_file is not None:
 
     # Preprocess
     input_tensor = transform(image).unsqueeze(0)
+    input_tensor.requires_grad = True
 
     # Prediction
-    with torch.no_grad():
-        outputs = model(input_tensor)
-        probs = torch.softmax(outputs, dim=1)[0]
+    outputs = model(input_tensor)
+    probs = torch.softmax(outputs, dim=1)[0]
 
     prob_glaucoma = probs[1].item()
 
-    # Threshold 
+    # Threshold
     threshold = 0.669
 
     if prob_glaucoma > threshold:
@@ -73,11 +128,11 @@ if uploaded_file is not None:
     # Grad-CAM
     # =========================
     target_layer = model.layer4[-1]
-    cam = GradCAM(model=model, target_layers=[target_layer])
+    cam_generator = GradCAM(model, target_layer)
 
-    img_np = np.array(image.resize((224,224))) / 255.0
+    pred_class = torch.argmax(outputs, dim=1).item()
+    cam = cam_generator.generate(input_tensor, pred_class)
 
-    grayscale_cam = cam(input_tensor=input_tensor)
-    cam_image = show_cam_on_image(img_np, grayscale_cam[0], use_rgb=True)
+    overlay_img = overlay_cam(image.resize((224, 224)), cam)
 
-    st.image(cam_image, caption="Grad-CAM", use_container_width=True)
+    st.image(overlay_img, caption="Grad-CAM", use_container_width=True)
