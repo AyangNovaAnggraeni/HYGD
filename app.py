@@ -3,7 +3,6 @@ import torch
 import torchvision.transforms as transforms
 import numpy as np
 from PIL import Image
-import cv2
 
 from torchvision import models
 from pytorch_grad_cam import GradCAM
