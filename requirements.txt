@@ -4,5 +4,8 @@ torchvision
 pillow
 numpy
 matplotlib
-grad-cam
 opencv-python-headless==4.9.0.80
+grad-cam
+
+#  BLOCK THIS
+opencv-python==0
