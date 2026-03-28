@@ -3,7 +3,7 @@ import torch
 import torchvision.transforms as transforms
 import numpy as np
 from PIL import Image
-
+import cv2
 from torchvision import models
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
@@ -53,8 +53,8 @@ if uploaded_file is not None:
 
     prob_glaucoma = probs[1].item()
 
-    # Threshold (your best one)
-    threshold = 0.26
+    # Threshold 
+    threshold = 0.669
 
     if prob_glaucoma > threshold:
         prediction = "Glaucoma (GON+)"
