@@ -8,6 +8,11 @@ from torchvision import models
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
+import sys
+import streamlit as st
+
+st.write(sys.version)
+
 # =========================
 # Load Model
 # =========================
