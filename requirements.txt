@@ -6,3 +6,4 @@ numpy
 matplotlib
 grad-cam
 opencv-python-headless
+opencv-python
